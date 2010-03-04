@@ -330,7 +330,8 @@ public class Application
 					{
 						String uName, pass, charName;
 						int admin;
-						while (true)
+						boolean loop=true;
+						while (loop)
 						{
 							System.out.println("Admin Menu");
 							System.out.println("--------------------");
@@ -365,6 +366,27 @@ public class Application
 								System.out.println("Account created.");
 								break;
 							case 2:
+								while (true)
+								{
+									System.out.print("Enter the username to modify: ");
+									uName=prompt.nextLine();
+									result=query.executeQuery("SELECT username FROM account WHERE username='"+uName+"';");
+									if (result.next()) break;
+									else System.out.println("There is no user by that name.");
+								}
+								System.out.print("Enter the password (or leave blank to not change): ");
+								pass=prompt.nextLine();
+								System.out.print("Is the user an admin (1=yes, 0=no)? ");
+								admin=Integer.parseInt(prompt.nextLine());
+								if (!pass.equals(""))
+								{
+									query.executeUpdate("UPDATE account SET password='"+pass+"',admin="+admin+" WHERE username='"+uName+"';");
+								}
+								else
+								{
+									query.executeUpdate("UPDATE account SET admin="+admin+" WHERE username='"+uName+"';");
+								}
+								System.out.println("Account modified.");
 								break;
 							case 3:
 								while (true)
@@ -380,6 +402,12 @@ public class Application
 								System.out.println("Account deleted.");
 								break;
 							case 4:
+								result=query.executeQuery("SELECT * FROM account;");
+								System.out.println("username, password, admin");
+								while (result.next())
+								{
+									System.out.println(result.getString("username")+", "+result.getString("password")+", "+result.getString("admin"));
+								}
 								break;
 							case 5:
 								break;
@@ -390,6 +418,7 @@ public class Application
 							case 8:
 								break;
 							case 9:
+								loop=false;
 								break;
 							}
 						}

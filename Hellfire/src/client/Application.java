@@ -180,8 +180,7 @@ public class Application
 						System.out.println("That name is already in use.");
 					}
 				}
-				character=input;
-				
+				character=input;	
 			}
 			
 			//now that they've chosen the character, start the main loop
@@ -260,9 +259,37 @@ public class Application
 						if (areaQuantity < 1){
 							query.executeUpdate("DELETE FROM areaItems WHERE areaX = "+x+" AND areaY="+y+" AND itemName = '"+item+"'");
 						} else {
-							query.executeUpdate("UPDATE areaItems SET quantity = "+(areaQuantity - 1)+" WHERE areaX = "+x+" AND areaY="+y+" AND itemName = '"+item+"'");
+							query.executeUpdate("UPDATE areaItems SET quantity = "+areaQuantity+" WHERE areaX = "+x+" AND areaY="+y+" AND itemName = '"+item+"'");
 						}
 						System.out.println("You picked up an "+item+"!");
+					}
+				}
+				else if (command.startsWith("drop"))
+				{
+					String item = command.replace("drop ", "");
+					int quantity = 0;
+					result = query.executeQuery("SELECT itemName, quantity FROM inventory WHERE playerName = '"+character+"' AND itemName = '"+item+"'");
+					if (!result.next()){
+						System.out.println("You do not have that item in your inventory");
+					} else {
+						quantity = result.getInt("quantity") - 1;
+						if (quantity < 1){
+							query.executeUpdate("DELETE FROM inventory WHERE playerName = '"+character+"' AND itemName = '"+item+"'");
+						} else {
+							query.executeUpdate("UPDATE inventory SET quantity = "+quantity+" WHERE playerName = '"+character+"' AND itemName = '"+item+"'");
+						}
+						result = query.executeQuery("SELECT x, y FROM playerCharacter WHERE name = '"+character+"'");
+						result.next();
+						int x = result.getInt("x");
+						int y = result.getInt("y");
+						result = query.executeQuery("SELECT itemName, quantity FROM areaItems WHERE areaX = "+x+" AND areaY="+y+" AND itemName = '"+item+"'");
+						if (!result.next()){
+							query.executeUpdate("INSERT INTO areaItems VALUES ("+x+", "+y+", '"+item+"', 1)");
+						} else {
+							int areaQuantity = result.getInt("quantity") + 1;
+							query.executeUpdate("UPDATE areaItems SET quantity = "+areaQuantity+" WHERE areaX = "+x+" AND areaY="+y+" AND itemName = '"+item+"'");
+						}
+						System.out.println("You dropped "+item+" on the ground!");
 					}
 				}
 				else if (command.startsWith("status"))

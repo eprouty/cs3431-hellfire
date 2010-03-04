@@ -41,7 +41,7 @@ public class Application
 			
 			//execute the following SQL query (it just returns all rows where the username equals
 			//what the user typed in), store the results in 'result'
-			result=query.executeQuery("SELECT * FROM account WHERE username='"+username+"';");
+			result=query.executeQuery("SELECT password FROM account WHERE username='"+username+"';");
 			
 			//result.next() gets the next row in the result set. if it's false on the first call, 
 			//no rows were returned 
@@ -53,7 +53,7 @@ public class Application
 			
 			//the result is in the form USERNAME PASSWORD ADMIN, so we compare what the user put in 
 			//for the password to what is in the database. if they match, 
-			if (result.getString(2).equals(password))
+			if (result.getString("password").equals(password))
 			{
 				System.out.println("You are now logged in.");
 				loggedIn=true;
@@ -65,14 +65,16 @@ public class Application
 		}
 		if (loggedIn)
 		{
+			//once the player is logged in, give them a menu to choose which of their characters they
+			//want to play, or allow them to make a new character if they want
 			ArrayList<String> characters=new ArrayList<String>();
-			result=query.executeQuery("SELECT * FROM playerCharacter WHERE username='"+username+"';");
+			result=query.executeQuery("SELECT name FROM playerCharacter WHERE username='"+username+"';");
 			System.out.println("0: Create a new character");
 			int i=0;
 			while (result.next())
 			{
 				i++;
-				characters.add(result.getString(1));
+				characters.add(result.getString("name"));
 				System.out.println(i+": Play as "+characters.get(i-1));
 			}
 			System.out.print("Enter your selection: ");
@@ -112,37 +114,39 @@ public class Application
 				character=input;
 				
 			}
+			
+			//now that they've chosen the character, start the main loop
 			input="look";
 			while(true)
 			{
-				result=query.executeQuery("SELECT * FROM playerCharacter WHERE name='"+character+"';");
+				result=query.executeQuery("SELECT x,y FROM playerCharacter WHERE name='"+character+"';");
 				result.next();
-				charX=result.getInt(6);
-				charY=result.getInt(7);
+				charX=result.getInt("x");
+				charY=result.getInt("y");
 				command=input;
 				if (command.startsWith("look"))
 				{
-					result=query.executeQuery("SELECT * FROM area WHERE x="+charX+" AND y="+charY+";");
+					result=query.executeQuery("SELECT description FROM area WHERE x="+charX+" AND y="+charY+";");
 					result.next();
-					System.out.println(result.getString(4));
+					System.out.println(result.getString("description"));
 				}
 				else if (command.startsWith("who"))
 				{
-					result=query.executeQuery("SELECT * FROM NPC WHERE areaX="+charX+" AND areaY="+charY+";");
+					result=query.executeQuery("SELECT name FROM NPC WHERE areaX="+charX+" AND areaY="+charY+";");
 					System.out.println("The following people are located here:");
 					while (result.next())
 					{
-						System.out.println(result.getString(4));
+						System.out.println(result.getString("name"));
 					}
 				}
 				else if (command.startsWith("inventory"))
 				{
-					result=query.executeQuery("SELECT * FROM inventory WHERE playerName='"+character+"';");
+					result=query.executeQuery("SELECT itemName,isEquipped,quantity FROM inventory WHERE playerName='"+character+"';");
 					System.out.println("You have the following items in your inventory:");
 					while (result.next())
 					{
-						System.out.print(result.getString(4)+" "+result.getString(2));
-						if (result.getInt(3)==1)
+						System.out.print(result.getString("quantity")+" "+result.getString("itemName"));
+						if (result.getInt("isEquipped")==1)
 						{
 							System.out.print(" (equipped)");
 						}
@@ -151,13 +155,13 @@ public class Application
 				}
 				else if (command.startsWith("status"))
 				{
-					result=query.executeQuery("SELECT * FROM playerCharacter WHERE name='"+character+"';");
+					result=query.executeQuery("SELECT attack,defense,health FROM playerCharacter WHERE name='"+character+"';");
 					System.out.println("Your current status:");
 					while (result.next())
 					{
-						System.out.println("ATK: "+result.getString(2));
-						System.out.println("DEF: "+result.getString(3));
-						System.out.println("Health: "+result.getString(4));
+						System.out.println("ATK: "+result.getString("attack"));
+						System.out.println("DEF: "+result.getString("defense"));
+						System.out.println("Health: "+result.getString("health"));
 					}
 				}
 				else if (command.startsWith("exit") || command.startsWith("quit") || command.startsWith("logout"))
@@ -167,17 +171,17 @@ public class Application
 				else if (command.startsWith("talk to"))
 				{
 					String person=command.replace("talk to ","");
-					result=query.executeQuery("SELECT * FROM NPC WHERE name='"+person+"';");
+					result=query.executeQuery("SELECT dialog FROM NPC WHERE name='"+person+"';");
 					if (!result.next())
 					{
 						System.out.println("That person is not here.");
 					}
-					else System.out.println(result.getString(5));
+					else System.out.println(result.getString("dialog"));
 				}
 				else if (command.startsWith("attack"))
 				{
 					String person=command.replace("attack ","");
-					result=query.executeQuery("SELECT * FROM NPC JOIN enemy ON NPC.ID=enemy.ID WHERE name='"+person+"';");
+					result=query.executeQuery("SELECT NPC.name,enemy.health,enemy.attack,enemy.defense FROM NPC JOIN enemy ON NPC.ID=enemy.ID WHERE name='"+person+"';");
 					if (!result.next())
 					{
 						System.out.println("That is not an enemy.");
@@ -186,14 +190,14 @@ public class Application
 					{
 						System.out.println("You attack "+person+"!");
 						double playerHealth, playerATK, playerDEF, enemyHealth, enemyATK, enemyDEF;
-						enemyHealth=result.getInt(7);
-						enemyATK=result.getInt(8);
-						enemyDEF=result.getInt(9);
-						result=query.executeQuery("SELECT * FROM playerCharacter WHERE name='"+character+"';");
+						enemyHealth=result.getInt("enemy.health");
+						enemyATK=result.getInt("enemy.attack");
+						enemyDEF=result.getInt("enemy.defense");
+						result=query.executeQuery("SELECT health,attack,defense FROM playerCharacter WHERE name='"+character+"';");
 						result.next();
-						playerHealth=result.getInt(4);
-						playerATK=result.getInt(2);
-						playerDEF=result.getInt(3);
+						playerHealth=result.getInt("health");
+						playerATK=result.getInt("attack");
+						playerDEF=result.getInt("defense");
 						while (enemyHealth*playerHealth!=0)
 						{
 							double percent=Math.random();
@@ -253,26 +257,26 @@ public class Application
 				else if (command.startsWith("equip"))
 				{
 					String item=command.replace("equip ","");
-					result=query.executeQuery("SELECT * FROM inventory WHERE playerName='"+character+"' AND itemName='"+item+"';");
+					result=query.executeQuery("SELECT itemName,isEquipped FROM inventory WHERE playerName='"+character+"' AND itemName='"+item+"';");
 					if (!result.next())
 					{
 						System.out.println("You do not have that item in your inventory.");
 					}
-					else if (result.getInt(3)==1)
+					else if (result.getInt("isEquipped")==1)
 					{
 						System.out.println("You already have that item equipped.");
 					}
 					else
 					{
-						result=query.executeQuery("SELECT * FROM item WHERE name='"+item+"';");
+						result=query.executeQuery("SELECT ATKModifier,DEFModifier FROM item WHERE name='"+item+"';");
 						result.next();
 						int attack, defense;
-						attack=result.getInt(3);
-						defense=result.getInt(4);
-						result=query.executeQuery("SELECT * FROM playerCharacter WHERE name='"+character+"';");
+						attack=result.getInt("ATKModifier");
+						defense=result.getInt("DEFModifier");
+						result=query.executeQuery("SELECT attack,defense FROM playerCharacter WHERE name='"+character+"';");
 						result.next();
-						attack+=result.getInt(2);
-						defense+=result.getInt(3);
+						attack+=result.getInt("attack");
+						defense+=result.getInt("defense");
 						query.executeUpdate("UPDATE playerCharacter SET attack="+attack+", defense="+defense+" WHERE name='"+character+"';");
 						query.executeUpdate("UPDATE inventory SET isEquipped=1 WHERE playerName='"+character+"' AND itemName='"+item+"';");
 						System.out.println("Item equipped.");
@@ -281,30 +285,35 @@ public class Application
 				else if (command.startsWith("unequip"))
 				{
 					String item=command.replace("unequip ","");
-					result=query.executeQuery("SELECT * FROM inventory WHERE playerName='"+character+"' AND itemName='"+item+"';");
+					result=query.executeQuery("SELECT itemName,isEquipped FROM inventory WHERE playerName='"+character+"' AND itemName='"+item+"';");
 					if (!result.next())
 					{
 						System.out.println("You do not have that item in your inventory.");
 					}
-					else if (result.getInt(3)==0)
+					else if (result.getInt("isEquipped")==0)
 					{
 						System.out.println("You do not have that item equipped.");
 					}
 					else
 					{
-						result=query.executeQuery("SELECT * FROM item WHERE name='"+item+"';");
+						result=query.executeQuery("SELECT ATKModifier,DEFModifier FROM item WHERE name='"+item+"';");
 						result.next();
 						int attack, defense;
-						attack=result.getInt(3);
-						defense=result.getInt(4);
-						result=query.executeQuery("SELECT * FROM playerCharacter WHERE name='"+character+"';");
+						attack=result.getInt("ATKModifier");
+						defense=result.getInt("DEFModifier");
+						result=query.executeQuery("SELECT attack,defense FROM playerCharacter WHERE name='"+character+"';");
 						result.next();
-						attack=result.getInt(2)-attack;
-						defense=result.getInt(3)-defense;
+						attack=result.getInt("attack")-attack;
+						defense=result.getInt("defense")-defense;
 						query.executeUpdate("UPDATE playerCharacter SET attack="+attack+", defense="+defense+" WHERE name='"+character+"';");
 						query.executeUpdate("UPDATE inventory SET isEquipped=0 WHERE playerName='"+character+"' AND itemName='"+item+"';");
 						System.out.println("Item unequipped.");
 					}
+				}
+				else if (command.startsWith("admin"))
+				{
+					result=query.executeQuery("SELECT admin FROM account WHERE name='"+username+"';");
+					result.next();
 				}
 				else
 				{

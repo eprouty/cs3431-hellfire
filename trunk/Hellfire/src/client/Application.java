@@ -213,6 +213,44 @@ public class Application
 						System.out.println(result.getString("quantity")+" "+result.getString("name"));
 					}
 				}
+				else if (command.startsWith("open"))
+				{
+					String chest=command.replace("open ","");
+					result=query.executeQuery("SELECT name, ID FROM areaContainers JOIN container ON containerID=ID WHERE areaX="+charX+" AND areaY="+charY+" AND name='"+chest+"';");
+					if (!result.next())
+					{
+						System.out.println("You can't do that.");
+					}
+					else
+					{
+						int ID=result.getInt("ID");
+						result=query.executeQuery("SELECT itemName, quantity FROM itemContainers WHERE containerID="+ID+";");
+						System.out.println("The "+chest+" contains:");
+						ArrayList<String> items=new ArrayList<String>();
+						ArrayList<Integer> quantity=new ArrayList<Integer>();
+						while (result.next())
+						{
+							System.out.println(result.getString("quantity")+" "+result.getString("itemName"));
+							items.add(result.getString("itemName"));
+							quantity.add(result.getInt("quantity"));
+						}
+						for (int counter=0; counter<items.size(); counter++)
+						{
+							result=query.executeQuery("SELECT * FROM inventory WHERE playerName='"+character+"' AND itemName='"+items.get(counter)+"';");
+							if (!result.next())
+							{
+								query.executeUpdate("INSERT INTO inventory VALUES('"+character+"','"+items.get(counter)+"',0,"+quantity.get(counter)+");");
+							}
+							else
+							{
+								query.executeUpdate("UPDATE inventory SET quantity="+(result.getInt("quantity")+quantity.get(counter))+" WHERE playerName='"+character+"' AND itemName='"+items.get(counter)+"';");
+							}
+						}
+						query.executeUpdate("DELETE FROM itemContainers WHERE containerID="+ID+";");
+						System.out.println("You take the items.");
+					}
+					
+				}
 				else if (command.startsWith("who"))
 				{
 					result=query.executeQuery("SELECT name FROM NPC WHERE areaX="+charX+" AND areaY="+charY+";");
@@ -239,7 +277,7 @@ public class Application
 				else if (command.startsWith("inspect"))
 				{
 					String item = command.replace("inspect ", "");
-					result = query.executeQuery("SELECT description, ATKModifier, DEFModifier FROM inventory JOIN item ON inventory.itemName = item.name WHERE itemName = '"+item+"'");
+					result = query.executeQuery("SELECT description, ATKModifier, DEFModifier FROM inventory JOIN item ON inventory.itemName = item.name WHERE itemName = '"+item+"' AND playerName='"+character+"';");
 					if (!result.next()){
 						System.out.println("You cannot inspect this item.");
 					} else {
@@ -345,15 +383,19 @@ public class Application
 					}
 					else System.out.println(result.getString("dialog"));
 					result=query.executeQuery("SELECT ID FROM NPC WHERE name='"+person+"';");
-					result=query.executeQuery("SELECT name FROM quest WHERE ID='"+result.getString("ID")+"';");
+					result.next();
+					result=query.executeQuery("SELECT name FROM quest WHERE startingNPC='"+result.getString("ID")+"';");
 					if (result.next())
 					{
 						String givesQuest = result.getString("name");
 						result=query.executeQuery("SELECT * FROM assignedQuests WHERE playerName='"+character+"' AND questName='"+givesQuest+"';");
 						if(!result.next())
 						{
-							query.executeUpdate("INSERT INTO assignedQuests VALUES playerName='"+character+"' AND questName='"+givesQuest+"';");
+							query.executeUpdate("INSERT INTO assignedQuests VALUES ('"+character+"','"+givesQuest+"');");
 						}
+						result=query.executeQuery("SELECT name,description FROM assignedQuests JOIN quest ON name=questName WHERE playerName='"+character+"';");
+						result.next();
+						System.out.println("You have been assigned the following quest: "+result.getString("name")+"\n"+result.getString("description"));
 					}
 				}
 				else if (command.startsWith("attack"))
@@ -502,7 +544,6 @@ public class Application
 				{
 					String theQuest=command.replace("describe ","");
 					result=query.executeQuery("SELECT description FROM assignedQuests JOIN quest ON(quest.name = assignedQuests.questName) WHERE playerName='"+character+"' AND name='"+theQuest+"';");
-					System.out.println("You are assigned to the following quests:");
 					while (result.next())
 					{
 						System.out.print(result.getString("description"));

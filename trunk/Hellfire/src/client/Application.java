@@ -108,9 +108,21 @@ public class Application
 			}
 			else
 			{
-				System.out.print("Enter your character's name: ");
-				input=prompt.nextLine();
-				query.executeUpdate("INSERT INTO playerCharacter VALUES ('"+input+"',1,1,10,'"+username+"',0,0);");
+				while(true)
+				{
+					System.out.print("Enter your character's name: ");
+					input=prompt.nextLine();
+					result=query.executeQuery("SELECT * FROM playerCharacter WHERE name='"+input+"';");
+					if (!result.next())
+					{
+						query.executeUpdate("INSERT INTO playerCharacter VALUES ('"+input+"',1,1,10,'"+username+"',0,0);");
+						break;
+					}
+					else
+					{
+						System.out.println("That name is already in use.");
+					}
+				}
 				character=input;
 				
 			}
@@ -312,13 +324,86 @@ public class Application
 				}
 				else if (command.startsWith("admin"))
 				{
-					result=query.executeQuery("SELECT admin FROM account WHERE name='"+username+"';");
+					result=query.executeQuery("SELECT admin FROM account WHERE username='"+username+"';");
 					result.next();
+					if (result.getInt("admin")==1)
+					{
+						String uName, pass, charName;
+						int admin;
+						while (true)
+						{
+							System.out.println("Admin Menu");
+							System.out.println("--------------------");
+							System.out.println("1. Create Account");
+							System.out.println("2. Modify Account");
+							System.out.println("3. Delete Account");
+							System.out.println("4. List All Accounts");
+							System.out.println("5. Create Character");
+							System.out.println("6. Modify Character");
+							System.out.println("7. Delete Character");
+							System.out.println("8. List All Characters");
+							System.out.println("9. Exit Admin Menu");
+							System.out.print("> ");
+							input=prompt.nextLine();
+							choice=Integer.parseInt(input);
+							switch (choice)
+							{
+							case 1:
+								while (true)
+								{
+									System.out.print("Enter the username: ");
+									uName=prompt.nextLine();
+									result=query.executeQuery("SELECT username FROM account WHERE username='"+uName+"';");
+									if (!result.next()) break;
+									else System.out.println("That username is already in use.");
+								}
+								System.out.print("Enter the password: ");
+								pass=prompt.nextLine();
+								System.out.print("Is the user an admin (1=yes, 0=no)? ");
+								admin=Integer.parseInt(prompt.nextLine());
+								query.executeUpdate("INSERT INTO account VALUES ('"+uName+"','"+pass+"',"+admin+");");
+								System.out.println("Account created.");
+								break;
+							case 2:
+								break;
+							case 3:
+								while (true)
+								{
+									System.out.print("Enter the username to delete: ");
+									uName=prompt.nextLine();
+									result=query.executeQuery("SELECT username FROM account WHERE username='"+uName+"';");
+									if (result.next()) break;
+									else System.out.println("There is no user by that name.");
+								}
+								query.executeUpdate("DELETE FROM playerCharacter WHERE username='"+uName+"';");
+								query.executeUpdate("DELETE FROM account WHERE username='"+uName+"';");
+								System.out.println("Account deleted.");
+								break;
+							case 4:
+								break;
+							case 5:
+								break;
+							case 6:
+								break;
+							case 7:
+								break;
+							case 8:
+								break;
+							case 9:
+								break;
+							}
+						}
+					}
+					else
+					{
+						System.out.println("You are not an admin.");
+					}
 				}
 				else
 				{
 					System.out.println("I don't know what that means.");
 				}
+				System.out.print("> ");
 				input=prompt.nextLine();
 			}
 		}

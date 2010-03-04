@@ -371,7 +371,7 @@ public class Application
 					result.next();
 					if (result.getInt("admin")==1)
 					{
-						String uName, pass, charName;
+						String uName, pass, charName, atk, def, health, x, y, item;
 						int admin;
 						boolean loop=true;
 						while (loop)
@@ -453,12 +453,169 @@ public class Application
 								}
 								break;
 							case 5:
+								while (true)
+								{
+									System.out.print("Enter the character name: ");
+									charName=prompt.nextLine();
+									result=query.executeQuery("SELECT name FROM playerCharacter WHERE name='"+charName+"';");
+									if (!result.next()) break;
+									else System.out.println("That name is already in use.");
+								}
+								System.out.print("Enter the attack: ");
+								atk=prompt.nextLine();
+								System.out.print("Enter the defense: ");
+								def=prompt.nextLine();
+								System.out.print("Enter the health: ");
+								health=prompt.nextLine();
+								while (true)
+								{
+									System.out.print("Enter the username that will own this character: ");
+									uName=prompt.nextLine();
+									result=query.executeQuery("SELECT username FROM account WHERE username='"+uName+"';");
+									if (result.next()) break;
+									else System.out.println("There is no user by that name.");
+								}
+								while (true)
+								{
+									System.out.print("Enter the character's x coordinate: ");
+									x=prompt.nextLine();
+									System.out.print("Enter the character's y coordinate: ");
+									y=prompt.nextLine();
+									result=query.executeQuery("SELECT name FROM area WHERE x="+x+" AND y="+y+";");
+									if (result.next()) break;
+									else System.out.println("There is no area with those coordinates.");
+								}
+								query.executeUpdate("INSERT INTO playerCharacter VALUES ('"+charName+"',"+atk+","+def+","+health+",'"+uName+"',"+x+","+y+");");
+								System.out.println("Character created.");
 								break;
 							case 6:
+								System.out.println("1. Modify character attributes");
+								System.out.println("2. Modify character inventory");
+								System.out.print("> ");
+								int option=Integer.parseInt(prompt.nextLine());
+								if (option==1)
+								{
+									while (true)
+									{
+										System.out.print("Enter the character to modify: ");
+										charName=prompt.nextLine();
+										result=query.executeQuery("SELECT * FROM playerCharacter WHERE name='"+charName+"';");
+										if (result.next()) break;
+										else System.out.println("There is no character by that name.");
+									}
+									System.out.print("Enter the character's attack (leave blank to not change): ");
+									atk=prompt.nextLine();
+									if (atk.equals("")) atk=result.getString("attack");
+									System.out.print("Enter the character's defense (leave blank to not change): ");
+									def=prompt.nextLine();
+									if (def.equals("")) def=result.getString("defense");
+									System.out.print("Enter the character's health (leave blank to not change): ");
+									health=prompt.nextLine();
+									if (health.equals("")) health=result.getString("health");
+									query.executeUpdate("UPDATE playerCharacter SET attack="+atk+",defense="+def+",health="+health+" WHERE name='"+charName+"';");
+									System.out.println("Character modified.");
+								}
+								else 
+								{
+									while (true)
+									{
+										System.out.print("Enter the character who's inventory you're modifying: ");
+										charName=prompt.nextLine();
+										result=query.executeQuery("SELECT * FROM playerCharacter WHERE name='"+charName+"';");
+										if (result.next()) break;
+										else System.out.println("There is no character by that name.");
+									}
+									boolean loop2=true;
+									while (loop2)
+									{
+										System.out.println("1. Add item");
+										System.out.println("2. Remove item");
+										System.out.println("3. List items");
+										System.out.println("4. Main admin menu");
+										System.out.print("> ");
+										option=Integer.parseInt(prompt.nextLine());
+										switch (option)
+										{
+										case 1:
+											while (true)
+											{
+												System.out.print("Enter the item to add: ");
+												item=prompt.nextLine();
+												result=query.executeQuery("SELECT * FROM item WHERE name='"+item+"';");
+												if (result.next()) break;
+												else System.out.println("That item does not exist.");
+											}
+											result=query.executeQuery("SELECT * FROM inventory WHERE playerName='"+charName+"' AND itemName='"+item+"';");
+											if (!result.next())
+											{
+												query.executeUpdate("INSERT INTO inventory VALUES('"+charName+"','"+item+"',0,1);");
+											}
+											else
+											{
+												query.executeUpdate("UPDATE inventory SET quantity="+(result.getInt("quantity")+1)+" WHERE playerName='"+charName+"' AND itemName='"+item+"';");
+											}
+											break;
+										case 2:
+											while (true)
+											{
+												System.out.print("Enter the item to remove: ");
+												item=prompt.nextLine();
+												result=query.executeQuery("SELECT * FROM inventory WHERE playerName='"+charName+"' AND itemName='"+item+"';");
+												if (result.next() || item.equals("")) break;
+												else System.out.println("The player does not have that item.");
+											}
+											if (item.equals("")) break;
+											if (result.getInt("quantity")==1)
+											{
+												query.executeUpdate("DELETE FROM inventory WHERE playerName='"+charName+"' AND itemName='"+item+"';");
+											}
+											else
+											{
+												query.executeUpdate("UPDATE inventory SET quantity="+(result.getInt("quantity")-1)+" WHERE playerName='"+charName+"' AND itemName='"+item+"';");
+											}
+											break;
+										case 3:
+											System.out.println("item name, is equipped, quantity");
+											result=query.executeQuery("SELECT * FROM inventory WHERE playerName='"+charName+"';");
+											while (result.next())
+											{
+												System.out.println(result.getString("itemName")+", "+result.getString("isEquipped")+", "+result.getString("quantity"));
+											}
+											break;
+										case 4:
+											loop2=false;
+											break;
+										}
+									}
+								}
 								break;
 							case 7:
+								while (true)
+								{
+									System.out.print("Enter the character to delete: ");
+									uName=prompt.nextLine();
+									result=query.executeQuery("SELECT name FROM playerCharacter WHERE name='"+uName+"';");
+									if (result.next()) break;
+									else System.out.println("There is no character by that name.");
+								}
+								query.executeUpdate("DELETE FROM assignedQuests WHERE playerName='"+uName+"';");
+								query.executeUpdate("DELETE FROM inventory WHERE playerName='"+uName+"';");
+								query.executeUpdate("DELETE FROM playerCharacter WHERE name='"+uName+"';");
+								System.out.println("Character deleted.");
 								break;
 							case 8:
+								result=query.executeQuery("SELECT * FROM playerCharacter;");
+								System.out.println("name, attack, defense, health, username, x, y");
+								while (result.next())
+								{
+									System.out.println(result.getString("name")+", "+
+													   result.getString("attack")+", "+
+													   result.getString("defense")+", "+
+													   result.getString("health")+", "+
+													   result.getString("username")+", "+
+													   result.getString("x")+", "+
+													   result.getString("y"));
+								}
 								break;
 							case 9:
 								loop=false;

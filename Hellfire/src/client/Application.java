@@ -197,6 +197,21 @@ public class Application
 					result=query.executeQuery("SELECT description FROM area WHERE x="+charX+" AND y="+charY+";");
 					result.next();
 					System.out.println(result.getString("description"));
+					result=query.executeQuery("SELECT itemName, quantity FROM areaItems WHERE areaX="+charX+" AND areaY="+charY+";");
+					if (result.next())
+					{
+						result.previous();
+						System.out.println("You see:");
+						while(result.next())
+						{
+							System.out.println(result.getString("quantity")+" "+result.getString("itemName"));
+						}
+					}
+					result=query.executeQuery("SELECT name, quantity FROM areaContainers JOIN container ON containerID=ID WHERE areaX="+charX+" AND areaY="+charY+";");
+					while(result.next())
+					{
+						System.out.println(result.getString("quantity")+" "+result.getString("name"));
+					}
 				}
 				else if (command.startsWith("who"))
 				{
@@ -268,11 +283,24 @@ public class Application
 				{
 					String item = command.replace("drop ", "");
 					int quantity = 0;
-					result = query.executeQuery("SELECT itemName, quantity FROM inventory WHERE playerName = '"+character+"' AND itemName = '"+item+"'");
+					result = query.executeQuery("SELECT itemName, quantity,isEquipped FROM inventory WHERE playerName = '"+character+"' AND itemName = '"+item+"'");
 					if (!result.next()){
 						System.out.println("You do not have that item in your inventory");
 					} else {
 						quantity = result.getInt("quantity") - 1;
+						if (result.getInt("isEquipped")==1)
+						{
+							result=query.executeQuery("SELECT ATKModifier,DEFModifier FROM item WHERE name='"+item+"';");
+							result.next();
+							int ATKModifier=result.getInt("ATKModifier");
+							int DEFModifier=result.getInt("DEFModifier");
+							result=query.executeQuery("SELECT attack,defense FROM playerCharacter WHERE name='"+character+"';");
+							result.next();
+							int newATK=result.getInt("attack")-ATKModifier;
+							int newDEF=result.getInt("defense")-DEFModifier;
+							query.executeUpdate("UPDATE playerCharacter SET attack="+newATK+",defense="+newDEF+" WHERE name='"+character+"';");
+						}
+						
 						if (quantity < 1){
 							query.executeUpdate("DELETE FROM inventory WHERE playerName = '"+character+"' AND itemName = '"+item+"'");
 						} else {

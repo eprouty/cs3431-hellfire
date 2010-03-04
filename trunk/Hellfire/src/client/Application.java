@@ -376,15 +376,14 @@ public class Application
 				else if (command.startsWith("talk to"))
 				{
 					String person=command.replace("talk to ","");
-					result=query.executeQuery("SELECT dialog FROM NPC WHERE name='"+person+"';");
+					result=query.executeQuery("SELECT dialog, ID FROM NPC WHERE name='"+person+"';");
 					if (!result.next())
 					{
 						System.out.println("That person is not here.");
 					}
 					else System.out.println(result.getString("dialog"));
-					result=query.executeQuery("SELECT ID FROM NPC WHERE name='"+person+"';");
-					result.next();
-					result=query.executeQuery("SELECT name FROM quest WHERE startingNPC='"+result.getString("ID")+"';");
+					int NPCID=result.getInt("ID");
+					result=query.executeQuery("SELECT name FROM quest WHERE startingNPC='"+NPCID+"';");
 					if (result.next())
 					{
 						String givesQuest = result.getString("name");
@@ -392,16 +391,24 @@ public class Application
 						if(!result.next())
 						{
 							query.executeUpdate("INSERT INTO assignedQuests VALUES ('"+character+"','"+givesQuest+"');");
+							result=query.executeQuery("SELECT name,description FROM assignedQuests JOIN quest ON name=questName WHERE playerName='"+character+"';");
+							result.next();
+							System.out.println("You have been assigned the following quest: "+result.getString("name")+"\n"+result.getString("description"));
 						}
-						result=query.executeQuery("SELECT name,description FROM assignedQuests JOIN quest ON name=questName WHERE playerName='"+character+"';");
-						result.next();
-						System.out.println("You have been assigned the following quest: "+result.getString("name")+"\n"+result.getString("description"));
+						else
+						{
+							result=query.executeQuery("SELECT * FROM questTarget JOIN assignedQuests ON questTarget.questName=assignedQuests.questName JOIN enemy ON enemyID=ID WHERE playerCharacter='"+character+"';");
+							if (!result.next())
+							{
+								//at this point, the target enemy no longer exists, so the quest has been completed.
+							}
+						}
 					}
 				}
 				else if (command.startsWith("attack"))
 				{
 					String person=command.replace("attack ","");
-					result=query.executeQuery("SELECT NPC.name,enemy.health,enemy.attack,enemy.defense FROM NPC JOIN enemy ON NPC.ID=enemy.ID WHERE name='"+person+"';");
+					result=query.executeQuery("SELECT name,health,attack,defense,NPC.ID FROM NPC JOIN enemy ON NPC.ID=enemy.ID WHERE name='"+person+"';");
 					if (!result.next())
 					{
 						System.out.println("That is not an enemy.");
@@ -410,9 +417,10 @@ public class Application
 					{
 						System.out.println("You attack "+person+"!");
 						double playerHealth, playerATK, playerDEF, enemyHealth, enemyATK, enemyDEF;
-						enemyHealth=result.getInt("enemy.health");
-						enemyATK=result.getInt("enemy.attack");
-						enemyDEF=result.getInt("enemy.defense");
+						int enemyID=result.getInt("NPC.ID");
+						enemyHealth=result.getInt("health");
+						enemyATK=result.getInt("attack");
+						enemyDEF=result.getInt("defense");
 						result=query.executeQuery("SELECT health,attack,defense FROM playerCharacter WHERE name='"+character+"';");
 						result.next();
 						playerHealth=result.getInt("health");
@@ -432,6 +440,9 @@ public class Application
 								if (enemyHealth<=0) 
 								{
 									System.out.println("You vanquished your foe!");
+									query.executeUpdate("UPDATE playerCharacter SET health="+playerHealth+" WHERE name='"+character+"';");
+									query.executeUpdate("DELETE FROM enemy WHERE ID="+enemyID+";");
+									query.executeUpdate("DELETE FROM NPC WHERE ID="+enemyID+";");
 									break;
 								}
 							}
@@ -441,6 +452,9 @@ public class Application
 								enemyHealth-=(int)Math.max(2*playerATK-enemyDEF,0);
 								if (enemyHealth<=0)
 								{
+									query.executeUpdate("UPDATE playerCharacter SET health="+playerHealth+" WHERE name='"+character+"';");
+									query.executeUpdate("DELETE FROM enemy WHERE ID="+enemyID+";");
+									query.executeUpdate("DELETE FROM NPC WHERE ID="+enemyID+";");
 									System.out.println("You vanquished your foe!");
 									break;
 								}
@@ -456,6 +470,8 @@ public class Application
 								playerHealth-=(int)Math.max((percent+0.2)*enemyATK-playerDEF,0);
 								if (playerHealth<=0) 
 								{
+									query.executeUpdate("UPDATE enemy SET health="+enemyHealth+" WHERE ID="+enemyID+";");
+									query.executeUpdate("UPDATE playerCharacter SET x=0,y=0,health=10 WHERE name='"+character+"';");
 									System.out.println("You were defeated.");
 									break;
 								}
@@ -466,6 +482,8 @@ public class Application
 								playerHealth-=(int)Math.max(2*enemyATK-playerDEF,0);
 								if (playerHealth<=0) 
 								{
+									query.executeUpdate("UPDATE enemy SET health="+enemyHealth+" WHERE ID="+enemyID+";");
+									query.executeUpdate("UPDATE playerCharacter SET x=0,y=0,health=10 WHERE name='"+character+"';");
 									System.out.println("You were defeated.");
 									break;
 								}

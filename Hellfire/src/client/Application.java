@@ -37,6 +37,63 @@ public class Application
 			}
 			System.out.print("Password: ");
 			password=prompt.nextLine();
+			
+			if(password.startsWith("change password"))
+			{
+				System.out.println("Are you sure?");
+				System.out.println("1) Yes.");
+				System.out.println("2) No.");
+				System.out.print("Enter your selection: ");
+				input=prompt.nextLine();
+				boolean passwordSelection=true;
+				int passChoice=-1;
+				while (passwordSelection)
+				{
+					try
+					{
+						passChoice=Integer.parseInt(input);
+					}
+					catch (NumberFormatException e)
+					{
+						System.out.println("Invalid selection. Please try again.");
+					}
+					if (!(passChoice<0 || passChoice>2))
+					{
+						passwordSelection=false;
+						break;
+					}
+					System.out.print("Enter your selection: ");
+					input=prompt.nextLine();
+				}
+				int selection;
+				selection=Integer.parseInt(input);
+				if(selection == 1)
+				{
+					System.out.print("Please input old Password: ");
+					password = prompt.nextLine();
+					System.out.print("Please input new Password: ");
+					String password2 = prompt.nextLine();
+					result=query.executeQuery("SELECT password FROM account WHERE username='"+username+"';");
+					if (result.next()==false)
+					{
+						System.out.println("Incorrect username or password. Please try again.");
+						continue;
+					}
+					if (result.getString("password").equals(password))
+					{
+						System.out.println("Password is being changed...");
+						query.executeUpdate("UPDATE account SET password='"+password2+"' WHERE username='"+username+"';");
+						password = password2;
+					}
+				}
+				if(selection == 2)
+				{
+					System.out.print("Password: ");
+					password=prompt.nextLine();
+				}
+				
+			}
+			
 			System.out.println("Logging in...");
 			
 			//execute the following SQL query (it just returns all rows where the username equals
@@ -232,6 +289,17 @@ public class Application
 						System.out.println("That person is not here.");
 					}
 					else System.out.println(result.getString("dialog"));
+					result=query.executeQuery("SELECT ID FROM NPC WHERE name='"+person+"';");
+					result=query.executeQuery("SELECT name FROM quest WHERE ID='"+result.getString("ID")+"';");
+					if (result.next())
+					{
+						String givesQuest = result.getString("name");
+						result=query.executeQuery("SELECT * FROM assignedQuests WHERE playerName='"+character+"' AND questName='"+givesQuest+"';");
+						if(!result.next())
+						{
+							query.executeUpdate("INSERT INTO assignedQuests VALUES playerName='"+character+"' AND questName='"+givesQuest+"';");
+						}
+					}
 				}
 				else if (command.startsWith("attack"))
 				{
@@ -364,6 +432,27 @@ public class Application
 						query.executeUpdate("UPDATE inventory SET isEquipped=0 WHERE playerName='"+character+"' AND itemName='"+item+"';");
 						System.out.println("Item unequipped.");
 					}
+				}
+				else if (command.startsWith("quest log"))
+				{
+					result=query.executeQuery("SELECT questName FROM assignedQuests WHERE playerName='"+character+"';");
+					System.out.println("You are assigned to the following quests:");
+					while (result.next())
+					{
+						System.out.print(result.getString("questName"));
+					}
+					System.out.println();
+				}
+				else if (command.startsWith("describe"))
+				{
+					String theQuest=command.replace("describe ","");
+					result=query.executeQuery("SELECT description FROM assignedQuests JOIN quest ON(quest.name = assignedQuests.questName) WHERE playerName='"+character+"' AND name='"+theQuest+"';");
+					System.out.println("You are assigned to the following quests:");
+					while (result.next())
+					{
+						System.out.print(result.getString("description"));
+					}
+					System.out.println();
 				}
 				else if (command.startsWith("admin"))
 				{

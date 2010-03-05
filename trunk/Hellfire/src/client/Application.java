@@ -559,30 +559,41 @@ public class Application
 				}
 				else if (command.startsWith("equip"))
 				{
-					String item=command.replace("equip ","");
-					result=query.executeQuery("SELECT itemName,isEquipped FROM inventory WHERE playerName='"+character+"' AND itemName='"+item+"';");
-					if (!result.next())
+					result=query.executeQuery("SELECT count(*) FROM inventory WHERE playerName='"+character+"' AND isEquipped=1;");
+					if (result.next())
 					{
-						System.out.println("You do not have that item in your inventory.");
-					}
-					else if (result.getInt("isEquipped")==1)
-					{
-						System.out.println("You already have that item equipped.");
-					}
-					else
-					{
-						result=query.executeQuery("SELECT ATKModifier,DEFModifier FROM item WHERE name='"+item+"';");
-						result.next();
-						int attack, defense;
-						attack=result.getInt("ATKModifier");
-						defense=result.getInt("DEFModifier");
-						result=query.executeQuery("SELECT attack,defense FROM playerCharacter WHERE name='"+character+"';");
-						result.next();
-						attack+=result.getInt("attack");
-						defense+=result.getInt("defense");
-						query.executeUpdate("UPDATE playerCharacter SET attack="+attack+", defense="+defense+" WHERE name='"+character+"';");
-						query.executeUpdate("UPDATE inventory SET isEquipped=1 WHERE playerName='"+character+"' AND itemName='"+item+"';");
-						System.out.println("Item equipped.");
+						if (result.getInt(1)<4)
+						{
+							String item=command.replace("equip ","");
+							result=query.executeQuery("SELECT itemName,isEquipped FROM inventory WHERE playerName='"+character+"' AND itemName='"+item+"';");
+							if (!result.next())
+							{
+								System.out.println("You do not have that item in your inventory.");
+							}
+							else if (result.getInt("isEquipped")==1)
+							{
+								System.out.println("You already have that item equipped.");
+							}
+							else
+							{
+								result=query.executeQuery("SELECT ATKModifier,DEFModifier FROM item WHERE name='"+item+"';");
+								result.next();
+								int attack, defense;
+								attack=result.getInt("ATKModifier");
+								defense=result.getInt("DEFModifier");
+								result=query.executeQuery("SELECT attack,defense FROM playerCharacter WHERE name='"+character+"';");
+								result.next();
+								attack+=result.getInt("attack");
+								defense+=result.getInt("defense");
+								query.executeUpdate("UPDATE playerCharacter SET attack="+attack+", defense="+defense+" WHERE name='"+character+"';");
+								query.executeUpdate("UPDATE inventory SET isEquipped=1 WHERE playerName='"+character+"' AND itemName='"+item+"';");
+								System.out.println("Item equipped.");
+							}
+						}
+						else
+						{
+							System.out.println("You already have four items equipped.");
+						}
 					}
 				}
 				else if (command.startsWith("unequip"))

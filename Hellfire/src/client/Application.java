@@ -319,8 +319,8 @@ public class Application
 						{
 							System.out.print(" (equipped)");
 						}
+						System.out.println();
 					}
-					System.out.println();
 				}
 				else if (command.startsWith("inspect"))
 				{
@@ -429,40 +429,43 @@ public class Application
 					{
 						System.out.println("That person is not here.");
 					}
-					else System.out.println(result.getString("dialog"));
-					int NPCID=result.getInt("ID");
-					result=query.executeQuery("SELECT name FROM quest WHERE startingNPC='"+NPCID+"';");
-					if (result.next())
+					else 
 					{
-						String givesQuest = result.getString("name");
-						result=query.executeQuery("SELECT * FROM assignedQuests WHERE playerName='"+character+"' AND questName='"+givesQuest+"';");
-						if(!result.next())
+						System.out.println(result.getString("dialog"));
+						int NPCID=result.getInt("ID");
+						result=query.executeQuery("SELECT name FROM quest WHERE startingNPC='"+NPCID+"';");
+						if (result.next())
 						{
-							query.executeUpdate("INSERT INTO assignedQuests VALUES ('"+character+"','"+givesQuest+"',0);");
-							result=query.executeQuery("SELECT name,description FROM assignedQuests JOIN quest ON name=questName WHERE playerName='"+character+"';");
-							result.next();
-							System.out.println("You have been assigned the following quest: "+result.getString("name")+"\n"+result.getString("description"));
-						}
-						else if (result.getInt("completed")==0)
-						{
-							String quest=result.getString("questName");
-							result=query.executeQuery("SELECT * FROM questTarget JOIN assignedQuests ON questTarget.questName=assignedQuests.questName JOIN enemy ON enemyID=ID WHERE playerName='"+character+"';");
-							if (!result.next())
+							String givesQuest = result.getString("name");
+							result=query.executeQuery("SELECT * FROM assignedQuests WHERE playerName='"+character+"' AND questName='"+givesQuest+"';");
+							if(!result.next())
 							{
-								result=query.executeQuery("SELECT itemName FROM questReward WHERE questName='"+quest+"';");
+								query.executeUpdate("INSERT INTO assignedQuests VALUES ('"+character+"','"+givesQuest+"',0);");
+								result=query.executeQuery("SELECT name,description FROM assignedQuests JOIN quest ON name=questName WHERE playerName='"+character+"';");
 								result.next();
-								String item=result.getString("itemName");
-								result=query.executeQuery("SELECT quantity FROM inventory WHERE itemName='"+item+"' AND playerName='"+character+"';");
-								if (result.next())
+								System.out.println("You have been assigned the following quest: "+result.getString("name")+"\n"+result.getString("description"));
+							}
+							else if (result.getInt("completed")==0)
+							{
+								String quest=result.getString("questName");
+								result=query.executeQuery("SELECT * FROM questTarget JOIN assignedQuests ON questTarget.questName=assignedQuests.questName JOIN enemy ON enemyID=ID WHERE playerName='"+character+"';");
+								if (!result.next())
 								{
-									query.executeUpdate("UPDATE inventory SET quantity="+(result.getInt("quantity")+1)+" WHERE itemName='"+item+"' AND playerName='"+character+"';");
+									result=query.executeQuery("SELECT itemName FROM questReward WHERE questName='"+quest+"';");
+									result.next();
+									String item=result.getString("itemName");
+									result=query.executeQuery("SELECT quantity FROM inventory WHERE itemName='"+item+"' AND playerName='"+character+"';");
+									if (result.next())
+									{
+										query.executeUpdate("UPDATE inventory SET quantity="+(result.getInt("quantity")+1)+" WHERE itemName='"+item+"' AND playerName='"+character+"';");
+									}
+									else
+									{
+										query.executeUpdate("INSERT INTO inventory VALUES('"+character+"','"+item+"',0,1);");
+									}
+									System.out.println("You received the following quest rewards: "+item);
+									query.executeUpdate("UPDATE assignedQuests SET completed=1 WHERE playerName='"+character+"' AND questName='"+quest+"';");
 								}
-								else
-								{
-									query.executeUpdate("INSERT INTO inventory VALUES('"+character+"','"+item+"',0,1);");
-								}
-								System.out.println("You received the following quest rewards: "+item);
-								query.executeUpdate("UPDATE assignedQuests SET completed=1 WHERE playerName='"+character+"' AND questName='"+quest+"';");
 							}
 						}
 					}

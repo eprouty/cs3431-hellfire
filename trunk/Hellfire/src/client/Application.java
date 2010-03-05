@@ -8,7 +8,7 @@ public class Application
 	{  
 		//connect to the database
 		Class.forName ("com.mysql.jdbc.Driver").newInstance();
-		Connection connection = DriverManager.getConnection("jdbc:mysql://mysql.wpi.edu/hellfire","mgheorghe","nu9W8Q");
+		Connection connection = DriverManager.getConnection("jdbc:mysql://mysql.wpi.edu/team7cs3431","mikegheorghe","yH7vXV");
 		
 		//create new scanner for reading user input
 		Scanner prompt=new Scanner(System.in);
@@ -260,6 +260,54 @@ public class Application
 						System.out.println(result.getString("name"));
 					}
 				}
+				else if (command.startsWith("north"))
+				{
+					result=query.executeQuery("SELECT * FROM area WHERE x="+charX+" AND y="+(charY-1)+";");
+					if (result.next())
+					{
+						query.executeUpdate("UPDATE playerCharacter SET y="+(charY-1)+" WHERE name='"+character+"';");
+					}
+					else
+					{
+						System.out.println("You cannot travel in that direction.");
+					}
+				}
+				else if (command.startsWith("east"))
+				{
+					result=query.executeQuery("SELECT * FROM area WHERE x="+(charX+1)+" AND y="+(charY)+";");
+					if (result.next())
+					{
+						query.executeUpdate("UPDATE playerCharacter SET x="+(charX+1)+" WHERE name='"+character+"';");
+					}
+					else
+					{
+						System.out.println("You cannot travel in that direction.");
+					}
+				}
+				else if (command.startsWith("south"))
+				{
+					result=query.executeQuery("SELECT * FROM area WHERE x="+(charX)+" AND y="+(charY+1)+";");
+					if (result.next())
+					{
+						query.executeUpdate("UPDATE playerCharacter SET y="+(charY+1)+" WHERE name='"+character+"';");
+					}
+					else
+					{
+						System.out.println("You cannot travel in that direction.");
+					}
+				}
+				else if (command.startsWith("west"))
+				{
+					result=query.executeQuery("SELECT * FROM area WHERE x="+(charX-1)+" AND y="+(charY)+";");
+					if (result.next())
+					{
+						query.executeUpdate("UPDATE playerCharacter SET x="+(charX-1)+" WHERE name='"+character+"';");
+					}
+					else
+					{
+						System.out.println("You cannot travel in that direction.");
+					}
+				}
 				else if (command.startsWith("inventory"))
 				{
 					result=query.executeQuery("SELECT itemName,isEquipped,quantity FROM inventory WHERE playerName='"+character+"';");
@@ -390,17 +438,31 @@ public class Application
 						result=query.executeQuery("SELECT * FROM assignedQuests WHERE playerName='"+character+"' AND questName='"+givesQuest+"';");
 						if(!result.next())
 						{
-							query.executeUpdate("INSERT INTO assignedQuests VALUES ('"+character+"','"+givesQuest+"');");
+							query.executeUpdate("INSERT INTO assignedQuests VALUES ('"+character+"','"+givesQuest+"',0);");
 							result=query.executeQuery("SELECT name,description FROM assignedQuests JOIN quest ON name=questName WHERE playerName='"+character+"';");
 							result.next();
 							System.out.println("You have been assigned the following quest: "+result.getString("name")+"\n"+result.getString("description"));
 						}
-						else
+						else if (result.getInt("completed")==0)
 						{
-							result=query.executeQuery("SELECT * FROM questTarget JOIN assignedQuests ON questTarget.questName=assignedQuests.questName JOIN enemy ON enemyID=ID WHERE playerCharacter='"+character+"';");
+							String quest=result.getString("questName");
+							result=query.executeQuery("SELECT * FROM questTarget JOIN assignedQuests ON questTarget.questName=assignedQuests.questName JOIN enemy ON enemyID=ID WHERE playerName='"+character+"';");
 							if (!result.next())
 							{
-								//at this point, the target enemy no longer exists, so the quest has been completed.
+								result=query.executeQuery("SELECT itemName FROM questReward WHERE questName='"+quest+"';");
+								result.next();
+								String item=result.getString("itemName");
+								result=query.executeQuery("SELECT quantity FROM inventory WHERE itemName='"+item+"' AND playerName='"+character+"';");
+								if (result.next())
+								{
+									query.executeUpdate("UPDATE inventory SET quantity="+(result.getInt("quantity")+1)+" WHERE itemName='"+item+"' AND playerName='"+character+"';");
+								}
+								else
+								{
+									query.executeUpdate("INSERT INTO inventory VALUES('"+character+"','"+item+"',0,1);");
+								}
+								System.out.println("You received the following quest rewards: "+item);
+								query.executeUpdate("UPDATE assignedQuests SET completed=1 WHERE playerName='"+character+"' AND questName='"+quest+"';");
 							}
 						}
 					}
@@ -550,11 +612,11 @@ public class Application
 				}
 				else if (command.startsWith("quest log"))
 				{
-					result=query.executeQuery("SELECT questName FROM assignedQuests WHERE playerName='"+character+"';");
+					result=query.executeQuery("SELECT * FROM assignedQuests WHERE playerName='"+character+"';");
 					System.out.println("You are assigned to the following quests:");
 					while (result.next())
 					{
-						System.out.print(result.getString("questName"));
+						if (result.getInt("completed")==0) System.out.print(result.getString("questName"));
 					}
 					System.out.println();
 				}
@@ -835,8 +897,12 @@ public class Application
 				{
 					System.out.println("I don't know what that means.");
 				}
-				System.out.print("> ");
-				input=prompt.nextLine();
+				if (!(command.startsWith("north")||command.startsWith("east")||command.startsWith("south")||command.startsWith("west")))
+				{
+					System.out.print("> ");
+					input=prompt.nextLine();
+				}
+				else input="look";
 			}
 		}
 		connection.close();

@@ -1,0 +1,1 @@
+A java application that connects to a MySQL database and allows users to play a text-based MMORPG.
